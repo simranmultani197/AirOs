@@ -46,6 +46,8 @@ class Storage:
             cursor.execute("ALTER TABLE traces ADD COLUMN token_usage INTEGER DEFAULT 0")
         if "estimated_cost" not in columns:
             cursor.execute("ALTER TABLE traces ADD COLUMN estimated_cost REAL DEFAULT 0.0")
+        if "diagnosis" not in columns:
+            cursor.execute("ALTER TABLE traces ADD COLUMN diagnosis TEXT")
 
         # Global Settings
         cursor.execute("""
@@ -72,7 +74,8 @@ class Storage:
                   recovery_attempts: int = 0,
                   saved_cost: float = 0.0,
                   token_usage: int = 0,
-                  estimated_cost: float = 0.0):
+                  estimated_cost: float = 0.0,
+                  diagnosis: Optional[str] = None):
         """Log a node execution trace."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -81,9 +84,9 @@ class Storage:
             output_json = json.dumps(output_state, default=str)
             
             cursor.execute("""
-                INSERT INTO traces (run_id, node_id, input_state, output_state, status, cost_tokens, recovery_attempts, saved_cost, token_usage, estimated_cost)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (run_id, node_id, input_json, output_json, status, cost_tokens, recovery_attempts, saved_cost, token_usage, estimated_cost))
+                INSERT INTO traces (run_id, node_id, input_state, output_state, status, cost_tokens, recovery_attempts, saved_cost, token_usage, estimated_cost, diagnosis)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (run_id, node_id, input_json, output_json, status, cost_tokens, recovery_attempts, saved_cost, token_usage, estimated_cost, diagnosis))
             conn.commit()
         except Exception as e:
             print(f"Error logging trace: {e}")
@@ -133,12 +136,18 @@ class Storage:
         
         history = []
         for row in rows:
+            # Check if diagnosis column exists in row (it might be None for old rows)
+            # Row factory allows access by name.
+            # If migration ran, the column exists but might be NULL.
+            diagnosis_val = row["diagnosis"] if "diagnosis" in row.keys() else None
+            
             history.append({
                 "id": row["id"],
                 "node_id": row["node_id"],
                 "input_state": json.loads(row["input_state"]),
                 "output_state": json.loads(row["output_state"]),
                 "status": row["status"],
-                "timestamp": row["timestamp"]
+                "timestamp": row["timestamp"],
+                "diagnosis": diagnosis_val
             })
         return history

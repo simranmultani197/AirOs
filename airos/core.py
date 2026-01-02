@@ -120,12 +120,14 @@ def reliable_node(
             recovery_count = 0
             current_error = None
             saved_cost = 0.0
+            diagnosis = None
             
             # Initial Execution
             try:
                 result = func(*args, **kwargs)
             except Exception as e:
                 current_error = e
+                diagnosis = str(e) # Capture diagnosis
                 # Fallback to legacy medic_repair if provided and no llm_callable
                 if medic_repair and not llm_callable:
                     try:
@@ -135,6 +137,7 @@ def reliable_node(
                         current_error = None
                     except Exception as legacy_e:
                         current_error = legacy_e
+                        diagnosis = str(legacy_e)
                 else:
                     # Proceed to Medic Loop
                     pass
@@ -151,6 +154,7 @@ def reliable_node(
                     result = sentinel.validate(result)
                 except SentinelError as se:
                     current_error = se
+                    diagnosis = str(se)
 
             # Recovery Loop
             # We try up to 2 times
@@ -196,6 +200,7 @@ def reliable_node(
                     
                 except Exception as retry_e:
                     current_error = retry_e
+                    diagnosis = str(retry_e) # Update diagnosis on retry failure
             
             if current_error:
                 # Log failure
@@ -206,7 +211,8 @@ def reliable_node(
                     output_state=str(current_error),
                     status="failed",
                     recovery_attempts=recovery_count,
-                    saved_cost=0.0
+                    saved_cost=0.0,
+                    diagnosis=diagnosis
                 )
                 print(f"CRITICAL FAILURE in {actual_node_name}: {current_error}")
                 raise current_error
@@ -224,6 +230,13 @@ def reliable_node(
             # Ideally we track Medic LLM usage separately, but for MVP we assume Medic output is part of result.
             # We already set saved_cost in the loop if repaired.
             
+            # Capture the original error as diagnosis if we recovered
+            final_diagnosis = None
+            if status == "repaired" and diagnosis:
+                final_diagnosis = diagnosis
+            elif status == "failed" and current_error:
+                final_diagnosis = str(current_error)
+
             storage.log_trace(
                 run_id=run_id,
                 node_id=actual_node_name,
@@ -233,7 +246,8 @@ def reliable_node(
                 recovery_attempts=recovery_count,
                 saved_cost=saved_cost,
                 token_usage=token_usage,
-                estimated_cost=estimated_cost
+                estimated_cost=estimated_cost,
+                diagnosis=final_diagnosis
             )
 
             return result

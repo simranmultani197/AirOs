@@ -31,17 +31,29 @@ def bad_schema_node(state):
     print("Executing bad schema node...")
     return {"message": "Fail", "value": "not an int"}
 
+import time
+
 def run_verification():
+    # Use a unique suffix to avoid "Loop Detected" when running this script multiple times
+    # because the database persists history.
+    suffix = int(time.time())
+    
     print("--- 1. Normal Run ---")
-    res = normal_node({"key": "val"}, config={"run_id": "verify_mvp_1"})
+    run_id_1 = f"verify_mvp_{suffix}"
+    print(f"Run ID: {run_id_1}")
+    res = normal_node({"key": "val"}, config={"run_id": run_id_1})
     print(f"Result: {res}")
 
     print("\n--- 2. Medic Logic Repair (Exception) ---")
-    res = error_node_llm({"step": "error"}, config={"run_id": "verify_medic_1"})
+    run_id_2 = f"verify_medic_logic_{suffix}"
+    print(f"Run ID: {run_id_2}")
+    res = error_node_llm({"step": "error"}, config={"run_id": run_id_2})
     print(f"Result after medic: {res}")
 
     print("\n--- 3. Medic Schema Repair (Sentinel Error) ---")
-    res = bad_schema_node({"step": "bad_schema"}, config={"run_id": "verify_medic_2"})
+    run_id_3 = f"verify_medic_schema_{suffix}"
+    print(f"Run ID: {run_id_3}")
+    res = bad_schema_node({"step": "bad_schema"}, config={"run_id": run_id_3})
     print(f"Result after medic: {res}")
 
 if __name__ == "__main__":

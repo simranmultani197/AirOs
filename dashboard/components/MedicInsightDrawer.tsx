@@ -81,18 +81,28 @@ export default function MedicInsightDrawer({ isOpen, onClose, trace, isLoading }
                 {!isFailure ? (
                     <div className="bg-gradient-to-br from-indigo-500/5 to-purple-500/5 border border-indigo-500/20 rounded-xl p-5 relative">
                         <p className="text-gray-200 text-sm leading-relaxed font-light">
-                            Detected a <span className="text-rose-400 font-mono">SchemaValidationError</span> in the output payload.
-                            The field <code className="bg-black/30 px-1 py-0.5 rounded text-indigo-300">value</code> was expected to be an <code className="text-emerald-300">integer</code> but received a <code className="text-amber-300">string</code>.
-                            Initiated autonomous repair protocol to cast the type while preserving data integrity.
+                            {trace.diagnosis ? (
+                                <>
+                                    <span className="text-purple-300 font-mono text-xs block mb-2">DIAGNOSIS ENGINE:</span>
+                                    {trace.diagnosis}
+                                </>
+                            ) : (
+                                <>
+                                    Detected a <span className="text-rose-400 font-mono">SchemaValidationError</span> in the output payload.
+                                    The field <code className="bg-black/30 px-1 py-0.5 rounded text-indigo-300">value</code> was expected to be an <code className="text-emerald-300">integer</code> but received a <code className="text-amber-300">string</code>.
+                                    Initiated autonomous repair protocol to cast the type while preserving data integrity.
+                                </>
+                            )}
                         </p>
                     </div>
                 ) : (
                     <div className="bg-gradient-to-br from-rose-900/10 to-red-900/5 border border-rose-500/20 rounded-xl p-5 relative">
                         <p className="text-gray-200 text-sm leading-relaxed font-light">
                             Critical Exception in <span className="text-rose-400 font-mono">Execution Protocol</span>.
-                            The agent encountered an unrecoverable error during the run cycle.
-                            <br /><br />
-                            <span className="text-rose-300 font-mono text-xs">Error: {trace.output_state ? String(trace.output_state).replace(/^"|"$/g, '') : "Unknown Error"}</span>
+                            <br />
+                            <span className="text-rose-300 font-mono text-xs mt-2 block">
+                                Error: {trace.diagnosis || (trace.output_state ? String(trace.output_state).replace(/^"|"$/g, '') : "Unknown Error")}
+                            </span>
                         </p>
                     </div>
                 )}
