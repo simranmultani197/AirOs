@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ShieldCheck, Zap, AlertTriangle } from "lucide-react";
 import { Sparkline } from "@/components/ui/Sparkline";
+import { ReliabilityGraph } from "@/components/ReliabilityGraph";
 
 type StatsData = {
     total_runs: number;
@@ -45,13 +46,18 @@ export default function Stats() {
                         ? Math.round(((stats.success + stats.repaired) / stats.total_runs) * 100)
                         : 100}%
                 </div>
-                {/* Mini Sparkline for Score Trend */}
-                <div className="mt-2 opacity-50">
-                    <Sparkline
-                        data={[98, 97, 99, 98, 99, 100, 99, 100]}
-                        width={100}
-                        height={12}
-                        color="#4ade80"
+                {/* Dynamic Reliability Graph */}
+                <div className="mt-4 h-12 w-full">
+                    <ReliabilityGraph
+                        data={[
+                            { timestamp: "02:00", score: 98 }, { timestamp: "04:00", score: 99 },
+                            { timestamp: "06:00", score: 97 }, { timestamp: "08:00", score: 85 },
+                            { timestamp: "10:00", score: 92 }, { timestamp: "12:00", score: 96 },
+                            { timestamp: "14:00", score: 98 }, { timestamp: "16:00", score: 99 },
+                            { timestamp: "18:00", score: 100 }, { timestamp: "20:00", score: 99 }
+                        ]}
+                        width={280}
+                        height={40}
                     />
                 </div>
             </div>

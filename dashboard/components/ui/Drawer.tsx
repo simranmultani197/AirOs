@@ -8,9 +8,10 @@ interface DrawerProps {
     onClose: () => void;
     title: string;
     children: React.ReactNode;
+    className?: string;
 }
 
-export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
+export function Drawer({ isOpen, onClose, title, children, className = "" }: DrawerProps) {
     const [visible, setVisible] = useState(false);
 
 
@@ -35,7 +36,7 @@ export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
 
             {/* Drawer Panel */}
             <div
-                className={`relative z-10 w-full max-w-lg h-full bg-slate-900 border-l border-white/10 shadow-2xl transition-transform duration-300 transform flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`relative z-10 w-full max-w-lg h-full bg-slate-900 border-l shadow-2xl transition-transform duration-300 transform flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'} ${className || 'border-white/10'}`}
             >
                 <div className="flex items-center justify-between p-6 border-b border-white/10">
                     <h2 className="text-xl font-bold text-white">{title}</h2>

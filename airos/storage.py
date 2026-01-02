@@ -107,6 +107,17 @@ class Storage:
         conn.close()
         return row[0] if row else None
 
+    def set_setting(self, key: str, value: str):
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO global_settings (key, value) 
+            VALUES (?, ?) 
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value
+        """, (key, value))
+        conn.commit()
+        conn.close()
+
     def get_run_history(self, run_id: str) -> List[Dict[str, Any]]:
         """Get all traces for a specific run_id, sorted by time."""
         conn = sqlite3.connect(self.db_path)

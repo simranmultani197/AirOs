@@ -1,4 +1,4 @@
-# AirOS (AI Reliability OS) - Phase 1
+# AirOS (AI Reliability OS)
 
 **A local-first, agentic reliability framework for LangGraph developers.**
 

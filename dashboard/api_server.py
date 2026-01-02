@@ -4,6 +4,7 @@ import sqlite3
 import json
 import os
 from contextlib import contextmanager
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -48,6 +49,19 @@ def get_traces(limit: int = 100, offset: int = 0):
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
+@app.get("/runs")
+def get_runs(limit: int = 100, offset: int = 0):
+    """
+    Alternate endpoint for fetching traces, per UI requirement.
+    Matches /api/traces logic.
+    """
+    with get_db() as conn:
+        cursor = conn.execute(
+            "SELECT * FROM traces ORDER BY id DESC LIMIT ? OFFSET ?", (limit, offset)
+        )
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+
 @app.get("/api/stats")
 def get_stats():
     with get_db() as conn:
@@ -85,8 +99,69 @@ def get_savings_stats():
             "total_money_saved": total_saved,
             "failures_prevented": failures_prevented,
             "loops_killed": loops_killed,
+            "total_spend": total_spend,
             "roi_multiplier": round(roi, 2)
         }
+
+
+class SettingsUpdate(BaseModel):
+    manual_labor_cost: float
+    infrastructure_rate: float
+
+@app.get("/api/runs/{run_id}")
+def get_run_details(run_id: str):
+    with get_db() as conn:
+        cursor = conn.execute(
+            "SELECT * FROM traces WHERE run_id = ? ORDER BY id ASC", (run_id,)
+        )
+        rows = cursor.fetchall()
+        if not rows:
+            raise HTTPException(status_code=404, detail="Run not found")
+        
+        # Parse JSON fields
+        results = []
+        for row in rows:
+            d = dict(row)
+            try:
+                d["input_state"] = json.loads(d["input_state"])
+            except: 
+                pass
+            try:
+                d["output_state"] = json.loads(d["output_state"])
+            except:
+                pass
+            results.append(d)
+        return results
+
+@app.get("/api/settings")
+def get_settings():
+    with get_db() as conn:
+        cursor = conn.execute("SELECT key, value FROM global_settings")
+        rows = cursor.fetchall()
+        settings = {row["key"]: row["value"] for row in rows}
+        return {
+            "manual_labor_cost": float(settings.get("manual_labor_cost", "50.0")),
+            "infrastructure_rate": float(settings.get("infrastructure_rate", "10.0")),
+            "cost_per_token": float(settings.get("cost_per_token", "0.000005"))
+        }
+
+@app.post("/api/settings")
+def update_settings(settings: SettingsUpdate):
+    with get_db() as conn:
+        # manual_labor_cost
+        conn.execute("""
+            INSERT INTO global_settings (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value
+        """, ("manual_labor_cost", str(settings.manual_labor_cost)))
+        
+        # infrastructure_rate
+        conn.execute("""
+            INSERT INTO global_settings (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value
+        """, ("infrastructure_rate", str(settings.infrastructure_rate)))
+        
+        conn.commit()
+    return {"status": "updated"}
 
 if __name__ == "__main__":
     import uvicorn
