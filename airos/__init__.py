@@ -38,6 +38,12 @@ from .storage import (
 # Medic - core component (depends only on pydantic)
 from .medic import Medic, MedicError, RecoveryResult
 
+# Budget - cost-saving circuit breakers
+from .budget import BudgetFuse, TimeoutFuse, GlobalBudget
+
+# Pricing - model cost calculation
+from .pricing import CostCalculator, ModelPricing, MODEL_PRICING, get_model_pricing
+
 # Error handling - lightweight, no external deps
 from .errors import (
     ErrorCategory,
@@ -48,6 +54,8 @@ from .errors import (
     RecoveryError,
     ConfigurationError,
     ProviderError,
+    BudgetExceededError,
+    TimeoutExceededError,
 )
 
 # Strategies - lightweight
@@ -95,7 +103,7 @@ def __getattr__(name):
 
 
 # Version
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     # Primary API
@@ -109,6 +117,15 @@ __all__ = [
     "RecoveryResult",
     "Sentinel",
     "SentinelError",
+    # Budget / Cost-saving
+    "BudgetFuse",
+    "TimeoutFuse",
+    "GlobalBudget",
+    # Pricing
+    "CostCalculator",
+    "ModelPricing",
+    "MODEL_PRICING",
+    "get_model_pricing",
     # Storage
     "InMemoryStorage",
     "Storage",
@@ -125,6 +142,8 @@ __all__ = [
     "RecoveryError",
     "ConfigurationError",
     "ProviderError",
+    "BudgetExceededError",
+    "TimeoutExceededError",
     # Strategies
     "RepairStrategy",
     "StrategyChain",

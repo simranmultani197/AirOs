@@ -8,6 +8,9 @@ from .fuse import Fuse, LoopError
 from .medic import Medic, MedicError
 from .sentinel import Sentinel, SentinelError
 from .storage import get_default_storage, BaseStorage
+from .budget import BudgetFuse, TimeoutFuse, GlobalBudget
+from .errors import BudgetExceededError, TimeoutExceededError
+from .pricing import CostCalculator, estimate_tokens as _estimate_tokens
 
 
 def reliable_node(
@@ -17,6 +20,11 @@ def reliable_node(
     fuse_limit: int = 3,
     node_name: Optional[str] = None,
     storage: Optional[BaseStorage] = None,
+    max_cost_usd: Optional[float] = None,
+    max_seconds: Optional[float] = None,
+    budget: Optional[GlobalBudget] = None,
+    cost_per_token: Optional[float] = None,
+    model: Optional[str] = None,
 ):
     """
     Decorator to make any AI agent node reliable.
@@ -29,6 +37,11 @@ def reliable_node(
         fuse_limit: Max identical states before tripping loop detection (default 3)
         node_name: Override the node name (defaults to function name)
         storage: Custom storage backend (defaults to in-memory)
+        max_cost_usd: Maximum dollar cost for this node's run before tripping
+        max_seconds: Maximum execution time in seconds before tripping
+        budget: Shared GlobalBudget instance for cross-node cost/time limits
+        cost_per_token: Override cost per token (USD). Overrides model pricing lookup.
+        model: Model name for pricing table lookup (e.g. "gpt-4o", "claude-3-5-sonnet")
     """
 
     def decorator(func):
@@ -61,14 +74,37 @@ def reliable_node(
             medic = Medic(llm_callable=llm_callable)
             sentinel = Sentinel(schema=sentinel_schema)
 
-            # Cost Tracking Helpers
-            def estimate_tokens(obj: Any) -> int:
-                s = str(obj)
-                return len(s) // 4
+            # Initialize cost/time circuit breakers
+            _budget_fuse = BudgetFuse(max_cost_usd) if max_cost_usd else None
+            _timeout_fuse = TimeoutFuse(max_seconds) if max_seconds else None
 
-            def get_cost(tokens: int) -> float:
-                price_str = _storage.get_setting("cost_per_token") or "0.000005"
-                return tokens * float(price_str)
+            # Cost calculator — priority: user override > model lookup > storage setting > default
+            _model_name = model
+            if not _model_name and hasattr(llm_callable, 'config'):
+                _model_name = getattr(llm_callable.config, 'model_id', None)
+            if not _model_name and hasattr(llm_callable, '_last_provider'):
+                lp = getattr(llm_callable, '_last_provider', None)
+                if lp and hasattr(lp, 'config'):
+                    _model_name = getattr(lp.config, 'model_id', None)
+
+            _cost_per_token = cost_per_token
+            if _cost_per_token is None and not _model_name:
+                cpt_str = _storage.get_setting("cost_per_token")
+                if cpt_str:
+                    _cost_per_token = float(cpt_str)
+
+            _calculator = CostCalculator(model=_model_name, cost_per_token=_cost_per_token)
+
+            # 0. Pre-execution budget checks
+            # Check global budget before even starting
+            if budget:
+                budget.check_cost()
+                budget.check_time()
+
+            # Check per-node budget against cumulative run cost
+            if _budget_fuse:
+                current_run_cost = _storage.get_run_cost(run_id)
+                _budget_fuse.check(current_run_cost)
 
             # 1. Fuse Check
             history_rows = _storage.get_run_history(run_id)
@@ -149,8 +185,9 @@ def reliable_node(
                     status = "repaired"
 
                     cost_to_reach_here = _storage.get_run_cost(run_id)
-                    medic_tokens = estimate_tokens(state) + estimate_tokens(current_error) + estimate_tokens(fixed_data) + 100
-                    medic_cost = get_cost(medic_tokens)
+                    medic_input = _estimate_tokens(state) + _estimate_tokens(current_error) + 100
+                    medic_output = _estimate_tokens(fixed_data)
+                    medic_cost = _calculator.calculate(medic_input, medic_output)
                     raw_savings = cost_to_reach_here - medic_cost
                     saved_cost = max(0.0, raw_savings)
 
@@ -173,9 +210,8 @@ def reliable_node(
                 )
                 raise current_error
 
-            # Log Success
-            token_usage = estimate_tokens(state) + estimate_tokens(result)
-            estimated_cost = get_cost(token_usage)
+            # Log Success — use CostCalculator for accurate pricing
+            token_usage, estimated_cost = _calculator.estimate_from_objects(state, result)
 
             final_diagnosis = None
             if status == "repaired" and diagnosis:
@@ -198,6 +234,24 @@ def reliable_node(
                 diagnosis=final_diagnosis,
                 duration_ms=duration_ms
             )
+
+            # Post-execution budget recording and checks
+            if budget:
+                budget.record_cost(estimated_cost)
+
+            # Post-execution per-node budget check (after cost is logged)
+            if _budget_fuse:
+                updated_run_cost = _storage.get_run_cost(run_id)
+                _budget_fuse.check(updated_run_cost)
+
+            # Post-execution timeout check
+            if _timeout_fuse:
+                _timeout_fuse.check(start_time)
+
+            # Post-execution global budget checks
+            if budget:
+                budget.check_cost()
+                budget.check_time()
 
             return result
         return wrapper

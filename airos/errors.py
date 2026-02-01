@@ -338,3 +338,19 @@ class ProviderError(AirOSError):
 class MedicError(AirOSError):
     """Raised when Medic recovery fails after all attempts."""
     pass
+
+
+class BudgetExceededError(AirOSError):
+    """Raised when cost budget is exceeded."""
+    def __init__(self, message: str, spent: float = 0.0, limit: float = 0.0):
+        super().__init__(message)
+        self.spent = spent
+        self.limit = limit
+
+
+class TimeoutExceededError(AirOSError):
+    """Raised when execution time limit is exceeded."""
+    def __init__(self, message: str, elapsed: float = 0.0, limit: float = 0.0):
+        super().__init__(message)
+        self.elapsed = elapsed
+        self.limit = limit

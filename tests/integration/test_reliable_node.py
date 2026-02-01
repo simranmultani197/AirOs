@@ -10,6 +10,8 @@ from typing import Dict, Any
 
 from airos import reliable_node, LoopError, SentinelError
 from airos.storage import Storage, InMemoryStorage
+from airos.budget import GlobalBudget
+from airos.errors import BudgetExceededError, TimeoutExceededError
 
 
 # ============================================================================
@@ -456,3 +458,169 @@ class TestReliableNodeEdgeCases:
             config={"configurable": {"thread_id": unique_run_id}}
         )
         assert result == {"found": "deep_value"}
+
+
+# ============================================================================
+# Budget Fuse Integration Tests
+# ============================================================================
+
+class TestReliableNodeBudget:
+    """Test budget circuit breaker integration."""
+
+    def test_max_cost_usd_under_budget(self, unique_run_id):
+        """Test execution succeeds when under per-node budget."""
+        test_storage = InMemoryStorage()
+
+        @reliable_node(max_cost_usd=10.0, storage=test_storage)
+        def cheap_node(state):
+            return {"result": "cheap"}
+
+        result = cheap_node(
+            {"input": "test"},
+            config={"configurable": {"thread_id": unique_run_id}}
+        )
+        assert result == {"result": "cheap"}
+
+    def test_max_cost_usd_trips_on_accumulation(self):
+        """Test per-node budget trips after accumulated cost."""
+        test_storage = InMemoryStorage()
+        run_id = f"budget-test-{uuid.uuid4()}"
+
+        @reliable_node(max_cost_usd=1.0, storage=test_storage)
+        def tracked_node(state):
+            return {"result": "ok"}
+
+        # First call should succeed (cost is tiny)
+        tracked_node(
+            {"input": "a"},
+            config={"configurable": {"thread_id": run_id}}
+        )
+
+        # Manually inflate the run cost to exceed the $1.0 budget
+        test_storage.log_trace(
+            run_id=run_id,
+            node_id="manual_cost",
+            input_state={},
+            output_state={},
+            status="success",
+            estimated_cost=2.0,
+        )
+
+        # Next call should trip on the pre-execution budget check
+        with pytest.raises(BudgetExceededError):
+            tracked_node(
+                {"input": "b"},
+                config={"configurable": {"thread_id": run_id}}
+            )
+
+    def test_max_seconds_under_timeout(self, unique_run_id):
+        """Test execution succeeds when under timeout."""
+        @reliable_node(max_seconds=10.0)
+        def fast_node(state):
+            return {"result": "fast"}
+
+        result = fast_node(
+            {"input": "test"},
+            config={"configurable": {"thread_id": unique_run_id}}
+        )
+        assert result == {"result": "fast"}
+
+    def test_global_budget_under_limit(self, unique_run_id):
+        """Test GlobalBudget passes when under limit."""
+        budget = GlobalBudget(max_cost_usd=100.0)
+
+        @reliable_node(budget=budget)
+        def budget_node(state):
+            return {"result": "ok"}
+
+        result = budget_node(
+            {"input": "test"},
+            config={"configurable": {"thread_id": unique_run_id}}
+        )
+        assert result == {"result": "ok"}
+        assert budget.total_spent > 0  # Some cost was recorded
+
+    def test_global_budget_shared_across_nodes(self):
+        """Test GlobalBudget is shared across multiple nodes."""
+        test_storage = InMemoryStorage()
+        budget = GlobalBudget(max_cost_usd=100.0)
+        run_id = f"shared-budget-{uuid.uuid4()}"
+
+        @reliable_node(budget=budget, storage=test_storage)
+        def node_a(state):
+            return {"from": "a"}
+
+        @reliable_node(budget=budget, storage=test_storage)
+        def node_b(state):
+            return {"from": "b"}
+
+        node_a(
+            {"input": "test"},
+            config={"configurable": {"thread_id": run_id}}
+        )
+        spent_after_a = budget.total_spent
+
+        node_b(
+            {"input": "test"},
+            config={"configurable": {"thread_id": run_id}}
+        )
+        spent_after_b = budget.total_spent
+
+        # Both nodes should have contributed to the budget
+        assert spent_after_b > spent_after_a
+
+    def test_global_budget_trips_when_exceeded(self):
+        """Test GlobalBudget trips after exceeding limit."""
+        budget = GlobalBudget(max_cost_usd=0.0001)
+        # Pre-spend the budget
+        budget.record_cost(0.001)
+
+        @reliable_node(budget=budget)
+        def over_budget_node(state):
+            return {"result": "should not reach"}
+
+        with pytest.raises(BudgetExceededError):
+            over_budget_node({"input": "test"})
+
+    def test_global_budget_timeout_trips(self):
+        """Test GlobalBudget timeout trips when expired."""
+        budget = GlobalBudget(max_cost_usd=100.0, max_seconds=0.01)
+        # Manually expire the timer
+        budget._start_time = budget._start_time - 1.0
+
+        @reliable_node(budget=budget)
+        def timed_out_node(state):
+            return {"result": "should not reach"}
+
+        with pytest.raises(TimeoutExceededError):
+            timed_out_node({"input": "test"})
+
+    def test_global_budget_reset(self):
+        """Test GlobalBudget can be reset between runs."""
+        budget = GlobalBudget(max_cost_usd=100.0)
+        run_id1 = f"reset-test-1-{uuid.uuid4()}"
+        run_id2 = f"reset-test-2-{uuid.uuid4()}"
+
+        @reliable_node(budget=budget)
+        def tracked_node(state):
+            return {"result": "ok"}
+
+        # First run
+        tracked_node(
+            {"input": "run1"},
+            config={"configurable": {"thread_id": run_id1}}
+        )
+        first_run_cost = budget.total_spent
+        assert first_run_cost > 0
+
+        # Reset
+        budget.reset()
+        assert budget.total_spent == 0.0
+
+        # Second run
+        tracked_node(
+            {"input": "run2"},
+            config={"configurable": {"thread_id": run_id2}}
+        )
+        assert budget.total_spent > 0
+        assert budget.remaining > 0
