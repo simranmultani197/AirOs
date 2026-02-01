@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "airos-sdk"
-version = "0.4.0"
+version = "0.4.1"
 description = "One decorator to make any AI agent reliable. Loop detection, auto-repair, output validation."
 readme = "README.md"
 license = "MIT"

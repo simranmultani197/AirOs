@@ -222,6 +222,21 @@ class CrewAIAdapter(FrameworkAdapter):
 
         return wrapper
 
+    @staticmethod
+    def _safe_setattr(obj: Any, name: str, value: Any) -> None:
+        """
+        Set an attribute on an object, bypassing Pydantic restrictions.
+
+        CrewAI v1.x Agent/Task are Pydantic BaseModel instances which block
+        setting attributes that aren't declared fields. We use
+        object.__setattr__ to bypass this restriction when patching methods.
+        """
+        try:
+            setattr(obj, name, value)
+        except (ValueError, AttributeError):
+            # Pydantic model — bypass field validation
+            object.__setattr__(obj, name, value)
+
     def wrap_agent(self, agent: Any, schema: Optional[Type[BaseModel]] = None) -> Any:
         """
         Wrap a CrewAI Agent with reliability features.
@@ -235,16 +250,19 @@ class CrewAIAdapter(FrameworkAdapter):
         """
         if hasattr(agent, "execute_task"):
             original_execute = agent.execute_task
-            agent.execute_task = self._create_wrapper(
+            wrapper = self._create_wrapper(
                 original_execute,
                 schema,
                 f"agent_{agent.role}" if hasattr(agent, "role") else "crewai_agent"
             )
+            self._safe_setattr(agent, "execute_task", wrapper)
         return agent
 
     def wrap_task(self, task: Any, schema: Optional[Type[BaseModel]] = None) -> Any:
         """
         Wrap a CrewAI Task with reliability features.
+
+        Supports both CrewAI v0.x (task.execute) and v1.x (task.execute_sync).
 
         Args:
             task: CrewAI Task instance
@@ -257,13 +275,17 @@ class CrewAIAdapter(FrameworkAdapter):
         if schema is None and hasattr(task, "output_pydantic"):
             schema = task.output_pydantic
 
-        if hasattr(task, "execute"):
-            original_execute = task.execute
-            task.execute = self._create_wrapper(
+        # CrewAI v1.x uses execute_sync; v0.x uses execute
+        method_name = "execute_sync" if hasattr(task, "execute_sync") else "execute"
+
+        if hasattr(task, method_name):
+            original_execute = getattr(task, method_name)
+            wrapper = self._create_wrapper(
                 original_execute,
                 schema,
                 f"task_{task.description[:30]}" if hasattr(task, "description") else "crewai_task"
             )
+            self._safe_setattr(task, method_name, wrapper)
         return task
 
 

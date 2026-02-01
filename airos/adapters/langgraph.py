@@ -89,6 +89,8 @@ class LangGraphMiddleware:
         Attach middleware to a LangGraph StateGraph.
 
         This wraps all nodes in the graph with AirOS reliability.
+        Supports both legacy LangGraph (nodes are plain callables) and
+        modern LangGraph (nodes are StateNodeSpec with .runnable).
 
         Args:
             graph: LangGraph StateGraph instance
@@ -96,18 +98,62 @@ class LangGraphMiddleware:
         Returns:
             The modified graph
         """
-        # LangGraph stores nodes in graph.nodes
-        if hasattr(graph, "nodes"):
-            for name, node in graph.nodes.items():
-                if name not in self._wrapped_nodes:
-                    wrapped = self._wrap_node(node, name)
-                    graph.nodes[name] = wrapped
-                    self._wrapped_nodes[name] = wrapped
+        if not hasattr(graph, "nodes"):
+            return graph
+
+        for name, node in graph.nodes.items():
+            if name in self._wrapped_nodes:
+                continue
+
+            # Modern LangGraph: nodes are StateNodeSpec dataclass with .runnable
+            if hasattr(node, "runnable") and hasattr(node.runnable, "func"):
+                wrapped = self._wrap_node_spec(node, name)
+                graph.nodes[name] = wrapped
+                self._wrapped_nodes[name] = wrapped
+            else:
+                # Legacy LangGraph: nodes are plain callables
+                wrapped = self._wrap_node(node, name)
+                graph.nodes[name] = wrapped
+                self._wrapped_nodes[name] = wrapped
 
         return graph
 
+    def _wrap_node_spec(self, node_spec: Any, name: str) -> Any:
+        """
+        Wrap a modern LangGraph StateNodeSpec by replacing its runnable's func.
+
+        StateNodeSpec is a dataclass containing a RunnableCallable.
+        We wrap the underlying func and reconstruct both.
+        """
+        from dataclasses import replace as dc_replace
+
+        runnable = node_spec.runnable
+        original_func = runnable.func
+
+        wrapped_func = reliable_node(
+            sentinel_schema=self.config.default_schema,
+            llm_callable=self.config.llm_callable,
+            fuse_limit=self.config.fuse_limit,
+            node_name=name,
+        )(original_func)
+
+        # Reconstruct RunnableCallable with the wrapped func
+        try:
+            from langgraph._internal._runnable import RunnableCallable
+            new_runnable = RunnableCallable(
+                wrapped_func,
+                name=runnable.name,
+                tags=runnable.tags,
+            )
+        except ImportError:
+            # Fallback: patch func directly
+            runnable.func = wrapped_func
+            return node_spec
+
+        return dc_replace(node_spec, runnable=new_runnable)
+
     def _wrap_node(self, node: Callable, name: str) -> Callable:
-        """Wrap a single node."""
+        """Wrap a single node (legacy LangGraph — plain callable)."""
         return reliable_node(
             sentinel_schema=self.config.default_schema,
             llm_callable=self.config.llm_callable,
