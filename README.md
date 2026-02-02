@@ -1,6 +1,10 @@
 # AirOS
 
-**One decorator to make any AI agent reliable.**
+[![PyPI version](https://img.shields.io/pypi/v/airos-sdk.svg)](https://pypi.org/project/airos-sdk/)
+[![Python](https://img.shields.io/pypi/pyversions/airos-sdk.svg)](https://pypi.org/project/airos-sdk/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**One decorator to make any AI agent reliable. Loop detection, auto-repair, output validation, budget control.**
 
 ```
 pip install airos-sdk
