@@ -2,7 +2,7 @@
 Unit tests for the Fuse module - Loop Detection.
 """
 import pytest
-from agentfuse.fuse import Fuse, LoopError
+from agentcircuit.fuse import Fuse, LoopError
 
 
 class TestFuseBasics:

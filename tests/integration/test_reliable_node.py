@@ -8,10 +8,10 @@ import os
 from pydantic import BaseModel
 from typing import Dict, Any
 
-from agentfuse import reliable_node, LoopError, SentinelError
-from agentfuse.storage import Storage, InMemoryStorage
-from agentfuse.budget import GlobalBudget
-from agentfuse.errors import BudgetExceededError, TimeoutExceededError
+from agentcircuit import reliable_node, LoopError, SentinelError
+from agentcircuit.storage import Storage, InMemoryStorage
+from agentcircuit.budget import GlobalBudget
+from agentcircuit.errors import BudgetExceededError, TimeoutExceededError
 
 
 # ============================================================================

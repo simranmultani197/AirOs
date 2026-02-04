@@ -3,7 +3,7 @@ Unit tests for the Pricing module - Cost calculation and model pricing.
 """
 import pytest
 
-from agentfuse.pricing import (
+from agentcircuit.pricing import (
     ModelPricing,
     CostCalculator,
     MODEL_PRICING,

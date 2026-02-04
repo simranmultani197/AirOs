@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentcircuit"
-version = "0.4.1"
+version = "0.5.0"
 description = "One decorator to make any AI agent reliable. Loop detection, auto-repair, output validation, budget control."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [{name = "Simranjeet Singh", email = "simranmultani197@gmail.com"}]
-keywords = ["ai", "agents", "reliability", "llm", "langchain", "crewai", "autogen", "langgraph", "agentfuse"]
+keywords = ["ai", "agents", "reliability", "llm", "langchain", "crewai", "autogen", "langgraph", "agentcircuit", "circuit-breaker"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -29,10 +29,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/simranmultani197/AgentFuse"
-Documentation = "https://github.com/simranmultani197/AgentFuse#readme"
-Repository = "https://github.com/simranmultani197/AgentFuse"
-Issues = "https://github.com/simranmultani197/AgentFuse/issues"
+Homepage = "https://github.com/simranmultani197/AgentCircuit"
+Documentation = "https://github.com/simranmultani197/AgentCircuit#readme"
+Repository = "https://github.com/simranmultani197/AgentCircuit"
+Issues = "https://github.com/simranmultani197/AgentCircuit/issues"
 
 [project.optional-dependencies]
 # LLM providers for auto-repair (pick what you use)
@@ -77,7 +77,7 @@ all = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["agentfuse*"]
+include = ["agentcircuit*"]
 exclude = ["tests*", "dashboard*", "docs*", "assets*"]
 
 [tool.pytest.ini_options]
@@ -92,7 +92,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["agentfuse"]
+source = ["agentcircuit"]
 omit = ["tests/*", "*/__pycache__/*"]
 
 [tool.coverage.report]

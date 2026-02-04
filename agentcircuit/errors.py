@@ -1,5 +1,5 @@
 """
-Error categorization and classification for AgentFuse.
+Error categorization and classification for AgentCircuit.
 
 This module provides structured error types and automatic classification
 to enable intelligent recovery strategies.
@@ -309,25 +309,25 @@ class ErrorClassifier:
         return hints.get(classified.category, "Review the error and correct the output accordingly.")
 
 
-# Custom error classes for AgentFuse
-class AgentFuseError(Exception):
-    """Base exception for AgentFuse errors."""
+# Custom error classes for AgentCircuit
+class AgentCircuitError(Exception):
+    """Base exception for AgentCircuit errors."""
     pass
 
 
-class RecoveryError(AgentFuseError):
+class RecoveryError(AgentCircuitError):
     """Raised when recovery fails."""
     def __init__(self, message: str, classified_error: Optional[ClassifiedError] = None):
         super().__init__(message)
         self.classified_error = classified_error
 
 
-class ConfigurationError(AgentFuseError):
+class ConfigurationError(AgentCircuitError):
     """Raised for configuration issues."""
     pass
 
 
-class ProviderError(AgentFuseError):
+class ProviderError(AgentCircuitError):
     """Raised for LLM provider issues."""
     def __init__(self, message: str, provider: str, original_error: Optional[Exception] = None):
         super().__init__(message)
@@ -335,12 +335,12 @@ class ProviderError(AgentFuseError):
         self.original_error = original_error
 
 
-class MedicError(AgentFuseError):
+class MedicError(AgentCircuitError):
     """Raised when Medic recovery fails after all attempts."""
     pass
 
 
-class BudgetExceededError(AgentFuseError):
+class BudgetExceededError(AgentCircuitError):
     """Raised when cost budget is exceeded."""
     def __init__(self, message: str, spent: float = 0.0, limit: float = 0.0):
         super().__init__(message)
@@ -348,7 +348,7 @@ class BudgetExceededError(AgentFuseError):
         self.limit = limit
 
 
-class TimeoutExceededError(AgentFuseError):
+class TimeoutExceededError(AgentCircuitError):
     """Raised when execution time limit is exceeded."""
     def __init__(self, message: str, elapsed: float = 0.0, limit: float = 0.0):
         super().__init__(message)

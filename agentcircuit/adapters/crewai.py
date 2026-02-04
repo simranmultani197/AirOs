@@ -1,5 +1,5 @@
 """
-CrewAI adapter for AgentFuse.
+CrewAI adapter for AgentCircuit.
 
 Provides integration with CrewAI's agents, tasks, and crews.
 """
@@ -294,7 +294,7 @@ class CrewAIMiddleware:
     Middleware for automatically wrapping CrewAI components.
 
     Usage:
-        from agentfuse.adapters import CrewAIAdapter
+        from agentcircuit.adapters import CrewAIAdapter
         from crewai import Agent, Task, Crew
 
         adapter = CrewAIAdapter()

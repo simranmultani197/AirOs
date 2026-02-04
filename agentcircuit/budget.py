@@ -1,5 +1,5 @@
 """
-Cost-saving circuit breakers for AgentFuse.
+Cost-saving circuit breakers for AgentCircuit.
 
 Provides:
 - BudgetFuse: Trips when cumulative dollar spend exceeds a threshold
@@ -94,7 +94,7 @@ class GlobalBudget:
     agent graph execution.
 
     Usage:
-        from agentfuse import reliable, GlobalBudget
+        from agentcircuit import reliable, GlobalBudget
 
         budget = GlobalBudget(max_cost_usd=5.0, max_seconds=120)
 

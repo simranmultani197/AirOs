@@ -1,5 +1,5 @@
 """
-Pre-built repair and retry strategies for AgentFuse.
+Pre-built repair and retry strategies for AgentCircuit.
 
 This module provides configurable strategies for handling different
 types of errors in AI agent execution.
@@ -474,7 +474,7 @@ class LLMRepairStrategy(RepairStrategy):
                 hint=hint
             )
         else:
-            prompt = f"""You are the AgentFuse Medic. Fix this failed agent output.
+            prompt = f"""You are the AgentCircuit Medic. Fix this failed agent output.
 
 ERROR TYPE: {error.category.value}
 ERROR MESSAGE: {error.message}

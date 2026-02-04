@@ -1,18 +1,25 @@
-# AgentFuse
+# AgentCircuit
 
 [![PyPI version](https://img.shields.io/pypi/v/agentcircuit.svg)](https://pypi.org/project/agentcircuit/)
 [![Python](https://img.shields.io/pypi/pyversions/agentcircuit.svg)](https://pypi.org/project/agentcircuit/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/tests-179%20passed-brightgreen.svg)]()
 
-**One decorator to make any AI agent reliable.**
+**Stop burning money on broken AI agents.**
 
-AgentFuse is a circuit breaker and runtime safety layer for AI agents — loop detection, auto-repair, output validation, and budget control in a single decorator.
+AgentCircuit is a circuit breaker and runtime safety layer for AI agents — loop detection, auto-repair, output validation, and budget control in a single decorator.
+
+Two problems kept breaking my agents:
+1. **Loops that silently drained my API budget** — $200+ before I noticed
+2. **Bad LLM outputs that crashed downstream code** — no validation, no recovery
+
+AgentCircuit fixes both with one decorator.
 
 ```
 pip install agentcircuit
 ```
 
-AgentFuse wraps your AI agent functions with invisible safety nets:
+AgentCircuit wraps your AI agent functions with invisible safety nets:
 
 - **Fuse** - Detects infinite loops and kills them before they drain your wallet
 - **Medic** - Catches exceptions and auto-repairs outputs using an LLM
@@ -22,11 +29,13 @@ AgentFuse wraps your AI agent functions with invisible safety nets:
 
 Zero config. No server. No database. Just a decorator.
 
+Works with **LangGraph**, **LangChain**, **CrewAI**, and **AutoGen**.
+
 ---
 
 ## Before / After
 
-**Before** - your agent crashes, loops forever, or returns garbage:
+**Before** — your agent crashes, loops forever, or returns garbage:
 
 ```python
 def extract_data(state):
@@ -37,7 +46,7 @@ def extract_data(state):
 **After** - one line change, your agent self-heals:
 
 ```python
-from agentfuse import reliable
+from agentcircuit import reliable
 from pydantic import BaseModel
 
 class Output(BaseModel):
@@ -47,17 +56,14 @@ class Output(BaseModel):
 @reliable(sentinel_schema=Output)
 def extract_data(state):
     result = call_llm(state["text"])
-    return json.loads(result)  # if this crashes, Medic fixes it
+    return json.loads(result)  # now validated against Output schema
 ```
 
 What happens behind the scenes:
-1. **Budget** checks if you've exceeded your dollar or time limit
-2. **Fuse** checks if this node is stuck in a loop (same input seen 3+ times)
-3. Your function runs normally
-4. **Sentinel** validates the output against `Output` schema
-5. If anything fails, **Medic** calls an LLM to fix the output
-6. Cost is tracked using **Pricing** (model-aware or user-configured)
-7. If Medic fails twice, the error propagates (no silent failures)
+1. **Fuse** checks if this node is stuck in a loop (same input seen 3+ times)
+2. Your function runs normally
+3. **Sentinel** validates the output against `Output` schema
+4. If validation fails, error is raised (add `llm_callable` to enable auto-repair)
 
 ---
 
@@ -66,7 +72,7 @@ What happens behind the scenes:
 ### Minimal (no LLM, just validation + loop detection)
 
 ```python
-from agentfuse import reliable
+from agentcircuit import reliable
 from pydantic import BaseModel
 
 class SearchResult(BaseModel):
@@ -107,14 +113,14 @@ Now if `search_node` throws an exception or returns invalid data, Medic will use
 
 ## Cost Saving
 
-AgentFuse provides three layers of cost protection to prevent runaway agent loops from draining your wallet.
+AgentCircuit provides three layers of cost protection to prevent runaway agent loops from draining your wallet.
 
 ### Per-Node Dollar Limit
 
 Stop a single node from spending too much:
 
 ```python
-from agentfuse import reliable
+from agentcircuit import reliable
 
 @reliable(max_cost_usd=2.0, model="gpt-4o")
 def expensive_node(state):
@@ -138,7 +144,7 @@ def slow_node(state):
 Set one budget for your entire agent graph — all nodes share it:
 
 ```python
-from agentfuse import reliable, GlobalBudget
+from agentcircuit import reliable, GlobalBudget
 
 budget = GlobalBudget(max_cost_usd=10.0, max_seconds=120)
 
@@ -168,7 +174,7 @@ If the combined cost of `node_a` + `node_b` exceeds $10.00 or 120 seconds, the n
 ### Catching Budget Errors
 
 ```python
-from agentfuse import reliable, GlobalBudget, BudgetExceededError, TimeoutExceededError
+from agentcircuit import reliable, GlobalBudget, BudgetExceededError, TimeoutExceededError
 
 budget = GlobalBudget(max_cost_usd=5.0, max_seconds=60)
 
@@ -189,11 +195,11 @@ except TimeoutExceededError as e:
 
 ## Pricing & Cost Tracking
 
-AgentFuse automatically tracks the cost of every node execution. It uses a priority chain to get the most accurate cost:
+AgentCircuit automatically tracks the cost of every node execution. It uses a priority chain to get the most accurate cost:
 
 | Priority | Source | Accuracy |
 |----------|--------|----------|
-| 1 | Actual API token usage (from AgentFuse providers) | Exact |
+| 1 | Actual API token usage (from AgentCircuit providers) | Exact |
 | 2 | User-provided `cost_per_token` | Explicit |
 | 3 | Built-in model pricing table lookup | Good estimate |
 | 4 | Default $5/1M tokens flat rate | Rough fallback |
@@ -220,21 +226,21 @@ def my_node(state):
 
 ### Supported Models
 
-Built-in pricing for 25+ models across major providers:
+Built-in pricing for 40+ models across major providers:
 
 | Provider | Models |
 |----------|--------|
-| **OpenAI** | gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4, gpt-3.5-turbo, o1, o1-mini, o3-mini |
-| **Anthropic** | claude-3-5-sonnet, claude-3-5-haiku, claude-3-opus, claude-3-haiku, claude-3-sonnet |
+| **OpenAI** | gpt-5, gpt-4.5-preview, o3, o3-pro, o3-mini, o1, o1-mini, gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-4, gpt-3.5-turbo |
+| **Anthropic** | claude-opus-4.5, claude-sonnet-4.5, claude-haiku-4.5, claude-opus-4.1, claude-opus-4, claude-sonnet-4, claude-3-5-sonnet, claude-3-5-haiku, claude-3-opus, claude-3-haiku |
+| **Google** | gemini-3-pro, gemini-3-flash, gemini-2.5-pro, gemini-2.5-flash, gemini-2.5-flash-lite, gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash |
 | **Groq** | llama-3.3-70b, llama-3.1-8b, mixtral-8x7b, llama-3.1-70b, gemma2-9b |
-| **Google** | gemini-1.5-pro, gemini-1.5-flash, gemini-2.0-flash |
 
 Model names are matched flexibly — `"gpt-4o"`, `"gpt-4o-2024-08-06"`, and `"GPT-4o"` all resolve to the same pricing.
 
 ### Using CostCalculator Directly
 
 ```python
-from agentfuse import CostCalculator, get_model_pricing
+from agentcircuit import CostCalculator, get_model_pricing
 
 # Check a model's pricing
 pricing = get_model_pricing("gpt-4o")
@@ -253,7 +259,7 @@ print(f"Cost: ${cost:.6f}")
 
 ```python
 from langgraph.graph import StateGraph
-from agentfuse import reliable, GlobalBudget
+from agentcircuit import reliable, GlobalBudget
 from pydantic import BaseModel
 
 class AgentState(BaseModel):
@@ -274,7 +280,7 @@ graph.add_node("process", process_node)
 ## With LangChain / CrewAI / AutoGen
 
 ```python
-from agentfuse import get_adapter
+from agentcircuit import get_adapter
 
 # LangChain
 adapter = get_adapter("langchain", fuse_limit=5)
@@ -320,13 +326,13 @@ Your Function
 
 ## Storage
 
-By default, AgentFuse stores traces **in memory** (lost when process exits). For persistence:
+By default, AgentCircuit stores traces **in memory** (lost when process exits). For persistence:
 
 ```python
-from agentfuse import reliable, set_default_storage
-from agentfuse.storage import Storage  # SQLite backend
+from agentcircuit import reliable, set_default_storage
+from agentcircuit.storage import Storage  # SQLite backend
 
-set_default_storage(Storage())  # Now traces persist to .agentfuse/traces.db
+set_default_storage(Storage())  # Now traces persist to .agentcircuit/traces.db
 
 @reliable()
 def my_node(state):
@@ -336,7 +342,7 @@ def my_node(state):
 Or pass storage per-decorator:
 
 ```python
-from agentfuse.storage import Storage
+from agentcircuit.storage import Storage
 
 db = Storage(db_path="my_traces.db")
 
@@ -379,7 +385,7 @@ pip install agentcircuit[all]            # Everything
 ### Core Components
 
 ```python
-from agentfuse import Fuse, Medic, Sentinel  # Use individually if needed
+from agentcircuit import Fuse, Medic, Sentinel  # Use individually if needed
 ```
 
 - **`Fuse(limit=3)`** - Loop detection via state hashing
@@ -389,7 +395,7 @@ from agentfuse import Fuse, Medic, Sentinel  # Use individually if needed
 ### Budget Components
 
 ```python
-from agentfuse import BudgetFuse, TimeoutFuse, GlobalBudget
+from agentcircuit import BudgetFuse, TimeoutFuse, GlobalBudget
 ```
 
 - **`BudgetFuse(max_cost_usd=1.0)`** - Dollar-based circuit breaker
@@ -399,7 +405,7 @@ from agentfuse import BudgetFuse, TimeoutFuse, GlobalBudget
 ### Pricing Components
 
 ```python
-from agentfuse import CostCalculator, get_model_pricing, MODEL_PRICING
+from agentcircuit import CostCalculator, get_model_pricing, MODEL_PRICING
 ```
 
 - **`CostCalculator(model="gpt-4o")`** - Calculate costs using model pricing
@@ -410,7 +416,7 @@ from agentfuse import CostCalculator, get_model_pricing, MODEL_PRICING
 ### Error Types
 
 ```python
-from agentfuse import BudgetExceededError, TimeoutExceededError, LoopError
+from agentcircuit import BudgetExceededError, TimeoutExceededError, LoopError
 ```
 
 | Error | Raised When | Attributes |

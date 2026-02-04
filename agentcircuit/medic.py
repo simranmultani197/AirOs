@@ -1,5 +1,5 @@
 """
-The Medic: Advanced LLM-based error recovery for AgentFuse.
+The Medic: Advanced LLM-based error recovery for AgentCircuit.
 
 This module provides intelligent error recovery using:
 - Error classification and categorization
@@ -312,7 +312,7 @@ class Medic:
         # Get hint for this error type
         hint = ErrorClassifier.get_recovery_prompt_hint(classified)
 
-        prompt = f"""SYSTEM: You are the AgentFuse Medic. Your job is to fix a failed agent node.
+        prompt = f"""SYSTEM: You are the AgentCircuit Medic. Your job is to fix a failed agent node.
 
 ERROR CATEGORY: {classified.category.value}
 ERROR SEVERITY: {classified.severity.value}

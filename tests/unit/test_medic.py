@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch, MagicMock
 from pydantic import BaseModel
 from typing import Dict, Any
 
-from agentfuse.medic import Medic, MedicError
+from agentcircuit.medic import Medic, MedicError
 
 
 # ============================================================================
@@ -43,7 +43,7 @@ class TestMedicBasics:
         """Test Medic initializes without LLM callable."""
         # Patch environment and providers to ensure no LLM is available
         with patch.dict('os.environ', {}, clear=True):
-            with patch('agentfuse.medic._get_providers') as mock_providers:
+            with patch('agentcircuit.medic._get_providers') as mock_providers:
                 # Make provider chain creation fail
                 mock_prov = MagicMock()
                 mock_prov.create_default_chain.side_effect = Exception("No providers available")
@@ -73,7 +73,7 @@ class TestMedicBasics:
         mock_groq_module.Groq = mock_groq_class
 
         with patch.dict('os.environ', {'GROQ_API_KEY': 'test-key'}):
-            with patch('agentfuse.medic._get_providers') as mock_providers:
+            with patch('agentcircuit.medic._get_providers') as mock_providers:
                 # Make provider chain creation fail so it falls back to Groq
                 mock_prov = MagicMock()
                 mock_prov.create_default_chain.side_effect = Exception("No providers")
@@ -81,9 +81,9 @@ class TestMedicBasics:
                 with patch.dict(sys.modules, {'groq': mock_groq_module}):
                     # Need to reimport to pick up the mock
                     import importlib
-                    import agentfuse.medic
-                    importlib.reload(agentfuse.medic)
-                    from agentfuse.medic import Medic as ReloadedMedic
+                    import agentcircuit.medic
+                    importlib.reload(agentcircuit.medic)
+                    from agentcircuit.medic import Medic as ReloadedMedic
                     medic = ReloadedMedic()
                     assert medic.llm_callable is not None
 
@@ -128,7 +128,7 @@ class TestMedicRecovery:
     def test_recovery_no_llm_raises_original(self):
         """Test recovery without LLM re-raises original error."""
         with patch.dict('os.environ', {}, clear=True):
-            with patch('agentfuse.medic._get_providers') as mock_providers:
+            with patch('agentcircuit.medic._get_providers') as mock_providers:
                 # Make provider chain creation fail
                 mock_prov = MagicMock()
                 mock_prov.create_default_chain.side_effect = Exception("No providers")

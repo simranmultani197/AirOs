@@ -1,5 +1,5 @@
 """
-Model pricing table and cost calculation for AgentFuse.
+Model pricing table and cost calculation for AgentCircuit.
 
 Provides accurate cost estimation based on:
 1. Actual API token usage (when available from providers)
@@ -24,20 +24,32 @@ class ModelPricing:
 
 
 # Built-in pricing table (USD per token)
-# Sources: official pricing pages as of early 2025
+# Sources: official pricing pages as of Feb 2026
 # These are approximate — providers update pricing regularly
 MODEL_PRICING: Dict[str, ModelPricing] = {
-    # OpenAI
+    # OpenAI - Latest
+    "gpt-5": ModelPricing(1.25 / 1_000_000, 10.00 / 1_000_000),
+    "gpt-4.5-preview": ModelPricing(75.00 / 1_000_000, 150.00 / 1_000_000),
+    "o3": ModelPricing(2.00 / 1_000_000, 8.00 / 1_000_000),
+    "o3-pro": ModelPricing(20.00 / 1_000_000, 80.00 / 1_000_000),
+    "o3-mini": ModelPricing(1.10 / 1_000_000, 4.40 / 1_000_000),
+    "o1": ModelPricing(15.00 / 1_000_000, 60.00 / 1_000_000),
+    "o1-mini": ModelPricing(3.00 / 1_000_000, 12.00 / 1_000_000),
+    # OpenAI - Previous Gen
     "gpt-4o": ModelPricing(2.50 / 1_000_000, 10.00 / 1_000_000),
     "gpt-4o-mini": ModelPricing(0.15 / 1_000_000, 0.60 / 1_000_000),
     "gpt-4-turbo": ModelPricing(10.00 / 1_000_000, 30.00 / 1_000_000),
     "gpt-4": ModelPricing(30.00 / 1_000_000, 60.00 / 1_000_000),
     "gpt-3.5-turbo": ModelPricing(0.50 / 1_000_000, 1.50 / 1_000_000),
-    "o1": ModelPricing(15.00 / 1_000_000, 60.00 / 1_000_000),
-    "o1-mini": ModelPricing(3.00 / 1_000_000, 12.00 / 1_000_000),
-    "o3-mini": ModelPricing(1.10 / 1_000_000, 4.40 / 1_000_000),
 
-    # Anthropic
+    # Anthropic - Latest (Claude 4.x)
+    "claude-opus-4.5": ModelPricing(5.00 / 1_000_000, 25.00 / 1_000_000),
+    "claude-sonnet-4.5": ModelPricing(3.00 / 1_000_000, 15.00 / 1_000_000),
+    "claude-haiku-4.5": ModelPricing(1.00 / 1_000_000, 5.00 / 1_000_000),
+    "claude-opus-4.1": ModelPricing(15.00 / 1_000_000, 75.00 / 1_000_000),
+    "claude-opus-4": ModelPricing(15.00 / 1_000_000, 75.00 / 1_000_000),
+    "claude-sonnet-4": ModelPricing(3.00 / 1_000_000, 15.00 / 1_000_000),
+    # Anthropic - Previous Gen (Claude 3.x)
     "claude-3-5-sonnet": ModelPricing(3.00 / 1_000_000, 15.00 / 1_000_000),
     "claude-3-5-sonnet-latest": ModelPricing(3.00 / 1_000_000, 15.00 / 1_000_000),
     "claude-3-5-haiku": ModelPricing(0.80 / 1_000_000, 4.00 / 1_000_000),
@@ -46,6 +58,17 @@ MODEL_PRICING: Dict[str, ModelPricing] = {
     "claude-3-opus-latest": ModelPricing(15.00 / 1_000_000, 75.00 / 1_000_000),
     "claude-3-haiku": ModelPricing(0.25 / 1_000_000, 1.25 / 1_000_000),
     "claude-3-sonnet": ModelPricing(3.00 / 1_000_000, 15.00 / 1_000_000),
+
+    # Google - Latest (Gemini 3.x & 2.5)
+    "gemini-3-pro": ModelPricing(2.00 / 1_000_000, 12.00 / 1_000_000),
+    "gemini-3-flash": ModelPricing(0.50 / 1_000_000, 3.00 / 1_000_000),
+    "gemini-2.5-pro": ModelPricing(1.25 / 1_000_000, 10.00 / 1_000_000),
+    "gemini-2.5-flash": ModelPricing(0.30 / 1_000_000, 2.50 / 1_000_000),
+    "gemini-2.5-flash-lite": ModelPricing(0.10 / 1_000_000, 0.40 / 1_000_000),
+    # Google - Previous Gen
+    "gemini-2.0-flash": ModelPricing(0.10 / 1_000_000, 0.40 / 1_000_000),
+    "gemini-1.5-pro": ModelPricing(1.25 / 1_000_000, 5.00 / 1_000_000),
+    "gemini-1.5-flash": ModelPricing(0.075 / 1_000_000, 0.30 / 1_000_000),
 
     # Groq (hosted models)
     "llama-3.3-70b": ModelPricing(0.59 / 1_000_000, 0.79 / 1_000_000),
@@ -56,11 +79,6 @@ MODEL_PRICING: Dict[str, ModelPricing] = {
     "mixtral-8x7b-32768": ModelPricing(0.24 / 1_000_000, 0.24 / 1_000_000),
     "llama-3.1-70b-versatile": ModelPricing(0.59 / 1_000_000, 0.79 / 1_000_000),
     "gemma2-9b-it": ModelPricing(0.20 / 1_000_000, 0.20 / 1_000_000),
-
-    # Google (for reference)
-    "gemini-1.5-pro": ModelPricing(1.25 / 1_000_000, 5.00 / 1_000_000),
-    "gemini-1.5-flash": ModelPricing(0.075 / 1_000_000, 0.30 / 1_000_000),
-    "gemini-2.0-flash": ModelPricing(0.10 / 1_000_000, 0.40 / 1_000_000),
 }
 
 # Default fallback: $5 per 1M tokens (flat rate for input and output)

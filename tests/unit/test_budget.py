@@ -5,8 +5,8 @@ import time
 import threading
 import pytest
 
-from agentfuse.budget import BudgetFuse, TimeoutFuse, GlobalBudget
-from agentfuse.errors import BudgetExceededError, TimeoutExceededError
+from agentcircuit.budget import BudgetFuse, TimeoutFuse, GlobalBudget
+from agentcircuit.errors import BudgetExceededError, TimeoutExceededError
 
 
 # ============================================================================
@@ -321,15 +321,15 @@ class TestGlobalBudgetThreadSafety:
 class TestBudgetErrors:
     """Test budget-related error types."""
 
-    def test_budget_exceeded_error_is_agentfuse_error(self):
-        """Test BudgetExceededError inherits from AgentFuseError."""
-        from agentfuse.errors import AgentFuseError
-        assert issubclass(BudgetExceededError, AgentFuseError)
+    def test_budget_exceeded_error_is_agentcircuit_error(self):
+        """Test BudgetExceededError inherits from AgentCircuitError."""
+        from agentcircuit.errors import AgentCircuitError
+        assert issubclass(BudgetExceededError, AgentCircuitError)
 
-    def test_timeout_exceeded_error_is_agentfuse_error(self):
-        """Test TimeoutExceededError inherits from AgentFuseError."""
-        from agentfuse.errors import AgentFuseError
-        assert issubclass(TimeoutExceededError, AgentFuseError)
+    def test_timeout_exceeded_error_is_agentcircuit_error(self):
+        """Test TimeoutExceededError inherits from AgentCircuitError."""
+        from agentcircuit.errors import AgentCircuitError
+        assert issubclass(TimeoutExceededError, AgentCircuitError)
 
     def test_budget_exceeded_error_attributes(self):
         """Test BudgetExceededError stores spent and limit."""

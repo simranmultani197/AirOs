@@ -1,5 +1,5 @@
 """
-LangChain adapter for AgentFuse.
+LangChain adapter for AgentCircuit.
 
 Provides integration with LangChain's LCEL chains, agents, and tools.
 """
@@ -254,7 +254,7 @@ class LangChainMiddleware:
     Middleware for automatically wrapping LangChain components.
 
     Usage:
-        from agentfuse.adapters import LangChainAdapter
+        from agentcircuit.adapters import LangChainAdapter
 
         adapter = LangChainAdapter()
         middleware = adapter.create_middleware()

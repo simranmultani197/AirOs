@@ -1,5 +1,5 @@
 """
-AgentFuse Root Cause Analysis (RCA) Module
+AgentCircuit Root Cause Analysis (RCA) Module
 
 Provides automated analysis of failures to identify patterns,
 root causes, and actionable recommendations.

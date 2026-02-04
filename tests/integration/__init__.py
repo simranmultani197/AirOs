@@ -1,1 +1,1 @@
-# Integration tests for AgentFuse
+# Integration tests for AgentCircuit

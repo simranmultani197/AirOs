@@ -8,7 +8,7 @@ import tempfile
 import shutil
 from datetime import datetime
 
-from agentfuse.storage import Storage
+from agentcircuit.storage import Storage
 
 
 class TestStorageBasics:

@@ -70,7 +70,7 @@ class FrameworkAdapter(ABC):
         **kwargs
     ) -> Callable:
         """
-        Wrap a single node/function with AgentFuse reliability.
+        Wrap a single node/function with AgentCircuit reliability.
 
         Args:
             func: The function to wrap

@@ -1,5 +1,5 @@
 """
-Framework adapters for AgentFuse.
+Framework adapters for AgentCircuit.
 
 Provides integration with multiple AI agent frameworks:
 - LangGraph (native)

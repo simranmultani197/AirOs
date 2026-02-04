@@ -1,5 +1,5 @@
 """
-AutoGen adapter for AgentFuse.
+AutoGen adapter for AgentCircuit.
 
 Provides integration with Microsoft AutoGen's conversable agents and group chats.
 """
@@ -295,7 +295,7 @@ class AutoGenMiddleware:
     Middleware for automatically wrapping AutoGen components.
 
     Usage:
-        from agentfuse.adapters import AutoGenAdapter
+        from agentcircuit.adapters import AutoGenAdapter
         import autogen
 
         adapter = AutoGenAdapter()
